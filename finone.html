@@ -296,7 +296,10 @@ td.r{text-align:right;}
   <div class="topbar">
     <div class="page-title">대시보드</div>
     <div class="topbar-right">
-      <input class="search-box" type="text" placeholder="종목 검색..." oninput="filterSearch(this.value)">
+      <div style="position:relative;">
+        <input class="search-box" type="text" placeholder="코인/주식 검색..." oninput="filterSearch(this.value)" autocomplete="off">
+        <div id="search-results" style="display:none;position:absolute;top:38px;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.3);padding:6px;min-width:260px;"></div>
+      </div>
       <button class="btn" onclick="loadAll()"><span class="spin" id="spin-icon">↻</span> 새로고침</button>
     </div>
   </div>
@@ -873,10 +876,78 @@ async function openStockDetail(idx) {
 function closeDetail(){document.getElementById('detail-modal').classList.remove('show');}
 function closeDetailModal(e){if(e.target===document.getElementById('detail-modal'))closeDetail();}
 
-function filterSearch(q){
-  document.querySelectorAll('#coin-table-body tr,#stock-table-body tr').forEach(r=>{
-    r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';
+// ── 실시간 코인 검색 ──────────────────────────────
+let searchTimer = null;
+async function filterSearch(q) {
+  if (!q.trim()) {
+    // 검색어 없으면 원래 테이블 복원
+    document.querySelectorAll('#coin-table-body tr, #stock-table-body tr').forEach(r => r.style.display = '');
+    document.getElementById('search-results').style.display = 'none';
+    return;
+  }
+  // 로컬 필터 먼저
+  document.querySelectorAll('#coin-table-body tr, #stock-table-body tr').forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
   });
+  // CoinGecko 실시간 검색
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      const coins = data.coins.slice(0, 8);
+      const el = document.getElementById('search-results');
+      if (coins.length === 0) { el.style.display = 'none'; return; }
+      el.style.display = 'block';
+      el.innerHTML = `
+        <div style="font-size:11px;color:var(--text3);padding:8px 14px 4px;text-transform:uppercase;letter-spacing:0.5px;">검색 결과</div>
+        ${coins.map(c => `
+          <div onclick="searchCoinDetail('${c.id}')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.1s;border-radius:8px;" onmouseover="this.style.background='rgba(124,111,255,0.08)'" onmouseout="this.style.background='transparent'">
+            <img src="${c.thumb}" style="width:24px;height:24px;border-radius:50%;" onerror="this.style.display='none'">
+            <div>
+              <div style="font-size:14px;font-weight:500;color:var(--text)">${c.name}</div>
+              <div style="font-size:11px;color:var(--text3)">${c.symbol.toUpperCase()} · #${c.market_cap_rank||'?'}</div>
+            </div>
+          </div>
+        `).join('')}
+      `;
+    } catch(e) {}
+  }, 400);
+}
+
+async function searchCoinDetail(coinId) {
+  document.getElementById('search-results').style.display = 'none';
+  document.querySelector('.search-box').value = '';
+  try {
+    const res = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&community_data=false&developer_data=false`);
+    const c = await res.json();
+    const chg = c.market_data.price_change_percentage_24h || 0;
+    const chg7 = c.market_data.price_change_percentage_7d || 0;
+    document.getElementById('d-icon').style.cssText = 'background:rgba(124,111,255,0.15);color:#a89fff;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;';
+    document.getElementById('d-icon').textContent = c.symbol.toUpperCase().slice(0,4);
+    document.getElementById('d-name').textContent = c.name;
+    document.getElementById('d-ticker').textContent = c.symbol.toUpperCase()+'/USD';
+    document.getElementById('d-price').textContent = '$'+c.market_data.current_price.usd.toLocaleString();
+    const dchg = document.getElementById('d-chg');
+    dchg.textContent = (chg>=0?'▲ +':'▼ ')+chg.toFixed(2)+'% (24h)';
+    dchg.className = 'detail-chg '+(chg>=0?'up':'down');
+    document.getElementById('d-chg24').textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%';
+    document.getElementById('d-chg24').className = 'detail-stat-val '+(chg>=0?'up':'down');
+    document.getElementById('d-chg7').textContent = (chg7>=0?'+':'')+chg7.toFixed(2)+'%';
+    document.getElementById('d-chg7').className = 'detail-stat-val '+(chg7>=0?'up':'down');
+    document.getElementById('d-mcap').textContent = '$'+fmt(c.market_data.market_cap.usd||0);
+    document.getElementById('d-vol').textContent = '$'+fmt(c.market_data.total_volume.usd||0);
+    document.getElementById('detail-modal').classList.add('show');
+    // 7일 차트
+    const r2 = await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=7&interval=daily`);
+    const d2 = await r2.json();
+    const labels = d2.prices.map(p=>new Date(p[0]).toLocaleDateString('ko-KR',{month:'short',day:'numeric'}));
+    const prices = d2.prices.map(p=>Math.round(p[1]));
+    const ctx = document.getElementById('detailChart').getContext('2d');
+    if(detailChartInst)detailChartInst.destroy();
+    detailChartInst = new Chart(ctx,{type:'line',data:{labels,datasets:[{data:prices,borderColor:'#7c6fff',backgroundColor:'rgba(124,111,255,0.1)',fill:true,tension:0,pointRadius:4,pointBackgroundColor:'#7c6fff'}]},options:getChartOpts()});
+    showToast('✓ '+c.name+' 데이터 로드 완료');
+  } catch(e) { showToast('⚠ 데이터 로드 실패'); }
 }
 
 // ── 초기 로드 ──────────────────────────────────────

@@ -278,8 +278,17 @@ td.r{text-align:right;}
     </div>
   </nav>
   <div class="sidebar-bottom">
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;position:relative;">
       <button class="btn" style="flex:1;justify-content:center;" onclick="toggleTheme()" id="theme-btn">🌙 다크</button>
+      <div style="position:relative;">
+        <button class="btn" style="padding:8px 10px;font-size:16px;" onclick="toggleLangMenu()" id="lang-btn">🇰🇷</button>
+        <div id="lang-menu" style="display:none;position:absolute;bottom:36px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+          <div onclick="setLang('ko');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇰🇷 한국어</div>
+          <div onclick="setLang('en');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇺🇸 English</div>
+          <div onclick="setLang('ja');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇯🇵 日本語</div>
+          <div onclick="setLang('zh');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇨🇳 中文</div>
+        </div>
+      </div>
     </div>
     <div class="premium-badge">
       <strong>🔓 프리미엄</strong>
@@ -876,24 +885,86 @@ async function openStockDetail(idx) {
 function closeDetail(){document.getElementById('detail-modal').classList.remove('show');}
 function closeDetailModal(e){if(e.target===document.getElementById('detail-modal'))closeDetail();}
 
+// ── 언어 시스템 ────────────────────────────────────
+const LANGS = {
+  ko: {
+    dashboard:'대시보드', coin:'코인 TOP 20', stock:'주식 시세', portfolio:'내 포트폴리오',
+    news:'뉴스 피드', ai:'AI 분석', alerts:'가격 알림', search:'코인/주식 검색...',
+    refresh:'새로고침', premium:'프리미엄', upgrade:'업그레이드 →',
+    aiTitle:'Claude AI 시장 브리핑', aiBtn:'🤖 AI 분석 실행',
+  },
+  en: {
+    dashboard:'Dashboard', coin:'Coin TOP 20', stock:'Stocks', portfolio:'Portfolio',
+    news:'News Feed', ai:'AI Analysis', alerts:'Price Alerts', search:'Search coins/stocks...',
+    refresh:'Refresh', premium:'Premium', upgrade:'Upgrade →',
+    aiTitle:'Claude AI Market Briefing', aiBtn:'🤖 Run AI Analysis',
+  },
+  ja: {
+    dashboard:'ダッシュボード', coin:'コイン TOP 20', stock:'株式', portfolio:'ポートフォリオ',
+    news:'ニュース', ai:'AI分析', alerts:'価格アラート', search:'コイン/株を検索...',
+    refresh:'更新', premium:'プレミアム', upgrade:'アップグレード →',
+    aiTitle:'Claude AI 市場ブリーフィング', aiBtn:'🤖 AI分析を実行',
+  },
+  zh: {
+    dashboard:'仪表板', coin:'币种 TOP 20', stock:'股票', portfolio:'投资组合',
+    news:'新闻', ai:'AI分析', alerts:'价格提醒', search:'搜索币种/股票...',
+    refresh:'刷新', premium:'高级版', upgrade:'升级 →',
+    aiTitle:'Claude AI 市场简报', aiBtn:'🤖 运行AI分析',
+  },
+};
+let currentLang = localStorage.getItem('finone-lang') || 'ko';
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('finone-lang', lang);
+  const L = LANGS[lang];
+  // 네비 업데이트
+  const navItems = document.querySelectorAll('.nav-item');
+  const keys = ['dashboard','coin','stock','portfolio','news','ai','alerts'];
+  navItems.forEach((el,i) => {
+    const svg = el.querySelector('svg');
+    el.textContent = L[keys[i]] || el.textContent;
+    if(svg) el.prepend(svg);
+  });
+  document.querySelector('.search-box').placeholder = L.search;
+  document.querySelector('.btn-upgrade').textContent = L.upgrade;
+  document.getElementById('lang-btn').textContent = {ko:'🇰🇷',en:'🇺🇸',ja:'🇯🇵',zh:'🇨🇳'}[lang];
+  showToast('✓ Language changed');
+}
+
+function toggleLangMenu() {
+  const m = document.getElementById('lang-menu');
+  m.style.display = m.style.display === 'block' ? 'none' : 'block';
+}
+
+// ── 한국어 코인 검색 매핑 ──────────────────────────
+const KO_COIN_MAP = {
+  '비트코인':'bitcoin','이더리움':'ethereum','솔라나':'solana','리플':'ripple',
+  '도지코인':'dogecoin','도지':'dogecoin','바이낸스':'binancecoin','카르다노':'cardano',
+  '에이다':'cardano','아발란체':'avalanche-2','체인링크':'chainlink','폴카닷':'polkadot',
+  '라이트코인':'litecoin','유니스왑':'uniswap','코스모스':'cosmos','트론':'tron',
+  '스텔라':'stellar','모네로':'monero','비트':'bitcoin','이더':'ethereum',
+  '솔':'solana','에이다':'cardano','링크':'chainlink','닷':'polkadot',
+};
+
 // ── 실시간 코인 검색 ──────────────────────────────
 let searchTimer = null;
 async function filterSearch(q) {
   if (!q.trim()) {
-    // 검색어 없으면 원래 테이블 복원
     document.querySelectorAll('#coin-table-body tr, #stock-table-body tr').forEach(r => r.style.display = '');
     document.getElementById('search-results').style.display = 'none';
     return;
   }
-  // 로컬 필터 먼저
+  // 한국어 → 영어 변환
+  const engQ = KO_COIN_MAP[q] || q;
+  // 로컬 필터
   document.querySelectorAll('#coin-table-body tr, #stock-table-body tr').forEach(r => {
     r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
   });
-  // CoinGecko 실시간 검색
   clearTimeout(searchTimer);
   searchTimer = setTimeout(async () => {
     try {
-      const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`);
+      const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(engQ)}`);
       const data = await res.json();
       const coins = data.coins.slice(0, 8);
       const el = document.getElementById('search-results');

@@ -203,7 +203,21 @@ td.r{text-align:right;}
 .hamburger{background:none;border:none;cursor:pointer;color:var(--text);font-size:22px;padding:4px;}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99;}
 .overlay.show{display:block;}
-.loading{color:var(--text3);font-size:13px;padding:28px 22px;text-align:center;}
+.detail-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:999;padding:20px;}
+.detail-modal.show{display:flex;}
+.detail-card{background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:28px;width:100%;max-width:480px;position:relative;}
+.detail-close{position:absolute;top:16px;right:16px;background:var(--bg3);border:none;color:var(--text2);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.detail-header{display:flex;align-items:center;gap:14px;margin-bottom:20px;}
+.detail-icon{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;}
+.detail-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;}
+.detail-ticker{font-size:13px;color:var(--text2);}
+.detail-price{font-family:'Syne',sans-serif;font-size:32px;font-weight:700;margin-bottom:6px;}
+.detail-chg{font-size:15px;margin-bottom:20px;}
+.detail-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.detail-stat{background:var(--bg3);border-radius:10px;padding:12px;}
+.detail-stat-label{font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px;}
+.detail-stat-val{font-size:14px;font-weight:500;}
+.detail-chart-wrap{position:relative;height:160px;}
 ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
 /* ── Responsive ── */
@@ -443,6 +457,24 @@ td.r{text-align:right;}
 
 </main>
 </div>
+<div class="detail-modal" id="detail-modal" onclick="closeDetailModal(event)">
+  <div class="detail-card">
+    <button class="detail-close" onclick="closeDetail()">×</button>
+    <div class="detail-header">
+      <div class="detail-icon" id="d-icon"></div>
+      <div><div class="detail-name" id="d-name"></div><div class="detail-ticker" id="d-ticker"></div></div>
+    </div>
+    <div class="detail-price" id="d-price"></div>
+    <div class="detail-chg" id="d-chg"></div>
+    <div class="detail-stats">
+      <div class="detail-stat"><div class="detail-stat-label">24h 변동</div><div class="detail-stat-val" id="d-chg24"></div></div>
+      <div class="detail-stat"><div class="detail-stat-label">7일 변동</div><div class="detail-stat-val" id="d-chg7"></div></div>
+      <div class="detail-stat"><div class="detail-stat-label">시가총액</div><div class="detail-stat-val" id="d-mcap"></div></div>
+      <div class="detail-stat"><div class="detail-stat-label">거래량 (24h)</div><div class="detail-stat-val" id="d-vol"></div></div>
+    </div>
+    <div class="detail-chart-wrap"><canvas id="detailChart" role="img" aria-label="상세 차트">상세 차트</canvas></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -535,7 +567,7 @@ async function loadBTCChart(){
     coinHistory.bitcoin={labels,prices};
     const ctx=document.getElementById('btcChart').getContext('2d');
     if(btcChartInst)btcChartInst.destroy();
-    btcChartInst=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'BTC',data:prices,borderColor:'#f5c842',backgroundColor:'rgba(245,200,66,0.07)',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#f5c842'}]},options:getChartOpts(v=>'$'+Math.round(v/1000)+'k')});
+    btcChartInst=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'BTC',data:prices,borderColor:'#f5c842',backgroundColor:'rgba(245,200,66,0.07)',fill:true,tension:0,pointRadius:4,pointBackgroundColor:'#f5c842'}]},options:getChartOpts(v=>'$'+Math.round(v/1000)+'k')});
   }catch(e){}
 }
 async function switchCoinChart(coinId,el){
@@ -555,7 +587,7 @@ async function switchCoinChart(coinId,el){
     const col=cols[coinId]||'#7c6fff';
     const ctx=document.getElementById('coinChart').getContext('2d');
     if(coinChartInst)coinChartInst.destroy();
-    coinChartInst=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:prices,borderColor:col,backgroundColor:col+'15',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:col}]},options:getChartOpts()});
+    coinChartInst=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:prices,borderColor:col,backgroundColor:col+'15',fill:true,tension:0,pointRadius:4,pointBackgroundColor:col}]},options:getChartOpts()});
   }catch(e){}
 }
 function switchStockChart(idx,el){
@@ -566,7 +598,7 @@ function switchStockChart(idx,el){
   const col=s.chg>=0?'#00d4a0':'#ff5e5e';
   const ctx=document.getElementById('stockChart').getContext('2d');
   if(stockChartInst)stockChartInst.destroy();
-  stockChartInst=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:s.history,borderColor:col,backgroundColor:col+'15',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:col}]},options:getChartOpts(v=>'₩'+v.toLocaleString())});
+  stockChartInst=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:s.history,borderColor:col,backgroundColor:col+'15',fill:true,tension:0,pointRadius:4,pointBackgroundColor:col}]},options:getChartOpts(v=>'₩'+v.toLocaleString())});
 }
 
 // ── 코인 TOP 20 로드 ──────────────────────────────
@@ -587,14 +619,14 @@ async function loadCoins(){
     document.getElementById('coin-table-body').innerHTML=data.slice(0,5).map((c,i)=>{
       const m=COIN_META[c.id]||{label:c.symbol.toUpperCase(),icon:'icon-btc',name:c.name};
       const chg=c.price_change_percentage_24h;
-      return`<tr><td class="rank-num">${i+1}</td><td><div class="asset-name-cell"><div class="asset-icon ${m.icon}">${m.label.slice(0,4)}</div><div><div>${m.name}</div><div class="asset-ticker">${m.label}</div></div></div></td><td class="r price-cell">$${Math.round(c.current_price).toLocaleString()}</td><td class="r ${chg>=0?'up':'down'}">${chg>=0?'+':''}${chg.toFixed(2)}%</td><td class="r" style="color:var(--text2)">$${fmt(c.market_cap)}</td></tr>`;
+      return`<tr onclick="openCoinDetail('${c.id}')" style="cursor:pointer;"><td class="rank-num">${i+1}</td><td><div class="asset-name-cell"><div class="asset-icon ${m.icon}">${m.label.slice(0,4)}</div><div><div>${m.name}</div><div class="asset-ticker">${m.label}</div></div></div></td><td class="r price-cell">$${Math.round(c.current_price).toLocaleString()}</td><td class="r ${chg>=0?'up':'down'}">${chg>=0?'+':''}${chg.toFixed(2)}%</td><td class="r" style="color:var(--text2)">$${fmt(c.market_cap)}</td></tr>`;
     }).join('');
     // TOP 20 풀 테이블
     document.getElementById('coin-full-body').innerHTML=data.map((c,i)=>{
       const m=COIN_META[c.id]||{label:c.symbol.toUpperCase(),icon:'icon-btc',name:c.name};
       const chg=c.price_change_percentage_24h;
       const chg7=c.price_change_percentage_7d_in_currency||0;
-      return`<tr><td class="rank-num">${i+1}</td><td><div class="asset-name-cell"><div class="asset-icon ${m.icon}">${m.label.slice(0,4)}</div><div><div>${m.name}</div><div class="asset-ticker">${c.symbol.toUpperCase()}</div></div></div></td><td class="r price-cell">$${c.current_price<1?c.current_price.toFixed(4):Math.round(c.current_price).toLocaleString()}</td><td class="r ${chg>=0?'up':'down'}">${chg>=0?'+':''}${chg.toFixed(2)}%</td><td class="r ${chg7>=0?'up':'down'}">${chg7>=0?'+':''}${chg7.toFixed(2)}%</td><td class="r" style="color:var(--text2)">$${fmt(c.market_cap)}</td></tr>`;
+      return`<tr onclick="openCoinDetail('${c.id}')" style="cursor:pointer;"><td class="rank-num">${i+1}</td><td><div class="asset-name-cell"><div class="asset-icon ${m.icon}">${m.label.slice(0,4)}</div><div><div>${m.name}</div><div class="asset-ticker">${c.symbol.toUpperCase()}</div></div></div></td><td class="r price-cell">$${c.current_price<1?c.current_price.toFixed(4):Math.round(c.current_price).toLocaleString()}</td><td class="r ${chg>=0?'up':'down'}">${chg>=0?'+':''}${chg.toFixed(2)}%</td><td class="r ${chg7>=0?'up':'down'}">${chg7>=0?'+':''}${chg7.toFixed(2)}%</td><td class="r" style="color:var(--text2)">$${fmt(c.market_cap)}</td></tr>`;
     }).join('');
     checkAlerts();
     document.getElementById('last-update').textContent='마지막 업데이트: '+new Date().toLocaleTimeString('ko-KR');
@@ -612,8 +644,8 @@ function loadFearGreed(){
 }
 
 function loadStocks(){
-  document.getElementById('stock-table-body').innerHTML=STOCKS.map(s=>`<tr><td><div class="asset-name-cell"><div class="asset-icon ${s.icon}">${s.name.slice(0,2)}</div><div><div>${s.name}</div><div class="asset-ticker">${s.ticker}</div></div></div></td><td class="r price-cell">₩${s.price.toLocaleString()}</td><td class="r ${s.chg>=0?'up':'down'}">${s.chg>=0?'▲ +':'▼ '}${s.chg}%</td><td class="r" style="color:var(--text2)">${s.vol}</td></tr>`).join('');
-  document.getElementById('stock-full-body').innerHTML=STOCKS.map(s=>`<tr><td><div class="asset-name-cell"><div class="asset-icon ${s.icon}">${s.name.slice(0,2)}</div><div><div>${s.name}</div><div class="asset-ticker">${s.ticker}</div></div></div></td><td class="r price-cell">₩${s.price.toLocaleString()}</td><td class="r ${s.chg>=0?'up':'down'}">${s.chg>=0?'+':''}${s.chg}%</td><td class="r" style="color:var(--text2)">${s.vol}</td><td class="r" style="color:var(--text2)">${s.mcap}</td></tr>`).join('');
+  document.getElementById('stock-table-body').innerHTML=STOCKS.map((s,i)=>`<tr onclick="openStockDetail(${i})" style="cursor:pointer;"><td><div class="asset-name-cell"><div class="asset-icon ${s.icon}">${s.name.slice(0,2)}</div><div><div>${s.name}</div><div class="asset-ticker">${s.ticker}</div></div></div></td><td class="r price-cell">₩${s.price.toLocaleString()}</td><td class="r ${s.chg>=0?'up':'down'}">${s.chg>=0?'▲ +':'▼ '}${s.chg}%</td><td class="r" style="color:var(--text2)">${s.vol}</td></tr>`).join('');
+  document.getElementById('stock-full-body').innerHTML=STOCKS.map((s,i)=>`<tr onclick="openStockDetail(${i})" style="cursor:pointer;"><td><div class="asset-name-cell"><div class="asset-icon ${s.icon}">${s.name.slice(0,2)}</div><div><div>${s.name}</div><div class="asset-ticker">${s.ticker}</div></div></div></td><td class="r price-cell">₩${s.price.toLocaleString()}</td><td class="r ${s.chg>=0?'up':'down'}">${s.chg>=0?'+':''}${s.chg}%</td><td class="r" style="color:var(--text2)">${s.vol}</td><td class="r" style="color:var(--text2)">${s.mcap}</td></tr>`).join('');
   switchStockChart(0,document.querySelector('#stock-chart-tabs .chart-tab'));
 }
 
@@ -774,6 +806,73 @@ function checkAlerts(){
 }
 
 // ── 검색 ──────────────────────────────────────────
+// ── 상세 모달 ──────────────────────────────────────
+let detailChartInst = null;
+async function openCoinDetail(coinId) {
+  const c = coinData[coinId]; if(!c) return;
+  const m = COIN_META[coinId]||{label:c.symbol.toUpperCase(),icon:'icon-btc',name:c.name};
+  const chg = c.price_change_percentage_24h;
+  const chg7 = c.price_change_percentage_7d_in_currency||0;
+  document.getElementById('d-icon').className='detail-icon '+m.icon;
+  document.getElementById('d-icon').textContent=m.label.slice(0,4);
+  document.getElementById('d-name').textContent=m.name;
+  document.getElementById('d-ticker').textContent=m.label+'/USD';
+  document.getElementById('d-price').textContent='$'+c.current_price.toLocaleString();
+  const dchg=document.getElementById('d-chg');
+  dchg.textContent=(chg>=0?'▲ +':'▼ ')+chg.toFixed(2)+'% (24h)';
+  dchg.className='detail-chg '+(chg>=0?'up':'down');
+  document.getElementById('d-chg24').textContent=(chg>=0?'+':'')+chg.toFixed(2)+'%';
+  document.getElementById('d-chg24').className='detail-stat-val '+(chg>=0?'up':'down');
+  document.getElementById('d-chg7').textContent=(chg7>=0?'+':'')+chg7.toFixed(2)+'%';
+  document.getElementById('d-chg7').className='detail-stat-val '+(chg7>=0?'up':'down');
+  document.getElementById('d-mcap').textContent='$'+fmt(c.market_cap);
+  document.getElementById('d-vol').textContent='$'+fmt(c.total_volume||0);
+  document.getElementById('detail-modal').classList.add('show');
+  // 차트 로드
+  try {
+    let labels,prices;
+    if(coinHistory[coinId]){labels=coinHistory[coinId].labels;prices=coinHistory[coinId].prices;}
+    else {
+      const r=await fetch(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=7&interval=daily`);
+      const d=await r.json();
+      labels=d.prices.map(p=>new Date(p[0]).toLocaleDateString('ko-KR',{month:'short',day:'numeric'}));
+      prices=d.prices.map(p=>Math.round(p[1]));
+      coinHistory[coinId]={labels,prices};
+    }
+    const cols={bitcoin:'#f5c842',ethereum:'#a89fff',solana:'#00d4a0',ripple:'#80c4ff'};
+    const col=cols[coinId]||'#7c6fff';
+    const ctx=document.getElementById('detailChart').getContext('2d');
+    if(detailChartInst)detailChartInst.destroy();
+    detailChartInst=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:prices,borderColor:col,backgroundColor:col+'15',fill:true,tension:0,pointRadius:4,pointBackgroundColor:col}]},options:getChartOpts()});
+  }catch(e){}
+}
+async function openStockDetail(idx) {
+  const s = STOCKS[idx];
+  const col = s.chg>=0?'#00d4a0':'#ff5e5e';
+  document.getElementById('d-icon').className='detail-icon '+s.icon;
+  document.getElementById('d-icon').textContent=s.name.slice(0,2);
+  document.getElementById('d-icon').style.background=s.chg>=0?'rgba(0,212,160,0.15)':'rgba(255,94,94,0.15)';
+  document.getElementById('d-name').textContent=s.name;
+  document.getElementById('d-ticker').textContent=s.ticker+' · KOSPI';
+  document.getElementById('d-price').textContent='₩'+s.price.toLocaleString();
+  const dchg=document.getElementById('d-chg');
+  dchg.textContent=(s.chg>=0?'▲ +':'▼ ')+s.chg+'% (전일 대비)';
+  dchg.className='detail-chg '+(s.chg>=0?'up':'down');
+  document.getElementById('d-chg24').textContent=(s.chg>=0?'+':'')+s.chg+'%';
+  document.getElementById('d-chg24').className='detail-stat-val '+(s.chg>=0?'up':'down');
+  document.getElementById('d-chg7').textContent='모의 데이터';
+  document.getElementById('d-chg7').className='detail-stat-val';
+  document.getElementById('d-mcap').textContent=s.mcap;
+  document.getElementById('d-vol').textContent=s.vol;
+  document.getElementById('detail-modal').classList.add('show');
+  const labels=['7일전','6일전','5일전','4일전','3일전','2일전','오늘'];
+  const ctx=document.getElementById('detailChart').getContext('2d');
+  if(detailChartInst)detailChartInst.destroy();
+  detailChartInst=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:s.history,borderColor:col,backgroundColor:col+'15',fill:true,tension:0,pointRadius:4,pointBackgroundColor:col}]},options:getChartOpts(v=>'₩'+v.toLocaleString())});
+}
+function closeDetail(){document.getElementById('detail-modal').classList.remove('show');}
+function closeDetailModal(e){if(e.target===document.getElementById('detail-modal'))closeDetail();}
+
 function filterSearch(q){
   document.querySelectorAll('#coin-table-body tr,#stock-table-body tr').forEach(r=>{
     r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';

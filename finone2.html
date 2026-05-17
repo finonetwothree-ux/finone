@@ -278,17 +278,8 @@ td.r{text-align:right;}
     </div>
   </nav>
   <div class="sidebar-bottom">
-    <div style="display:flex;gap:8px;margin-bottom:12px;position:relative;">
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
       <button class="btn" style="flex:1;justify-content:center;" onclick="toggleTheme()" id="theme-btn">🌙 다크</button>
-      <div style="position:relative;">
-        <button class="btn" style="padding:8px 10px;font-size:16px;" onclick="toggleLangMenu()" id="lang-btn">🇰🇷</button>
-        <div id="lang-menu" style="display:none;position:absolute;bottom:36px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.3);">
-          <div onclick="setLang('ko');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇰🇷 한국어</div>
-          <div onclick="setLang('en');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇺🇸 English</div>
-          <div onclick="setLang('ja');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇯🇵 日本語</div>
-          <div onclick="setLang('zh');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇨🇳 中文</div>
-        </div>
-      </div>
     </div>
     <div class="premium-badge">
       <strong>🔓 프리미엄</strong>
@@ -310,6 +301,15 @@ td.r{text-align:right;}
         <div id="search-results" style="display:none;position:absolute;top:38px;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.3);padding:6px;min-width:260px;"></div>
       </div>
       <button class="btn" onclick="loadAll()"><span class="spin" id="spin-icon">↻</span> 새로고침</button>
+      <div style="position:relative;">
+        <button class="btn" style="padding:8px 10px;font-size:16px;" onclick="toggleLangMenu()" id="lang-btn">🇰🇷</button>
+        <div id="lang-menu" style="display:none;position:absolute;top:38px;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:6px;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+          <div onclick="setLang('ko');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇰🇷 한국어</div>
+          <div onclick="setLang('en');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇺🇸 English</div>
+          <div onclick="setLang('ja');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇯🇵 日本語</div>
+          <div onclick="setLang('zh');toggleLangMenu()" style="padding:8px 14px;cursor:pointer;border-radius:6px;font-size:13px;display:flex;align-items:center;gap:8px;" onmouseover="this.style.background='rgba(124,111,255,0.1)'" onmouseout="this.style.background='transparent'">🇨🇳 中文</div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="status-bar"><div class="status-dot"></div><span id="last-update">데이터 로딩 중...</span></div>
